@@ -30,7 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @Testcontainers
-public class IntegrationTestDemo {
+public class ProductServiceIntegrationTest {
 
   @Autowired private MockMvc mockMvc;
 
@@ -58,12 +58,9 @@ public class IntegrationTestDemo {
   }
 
   @AfterEach
-  public void afterEach()
-  {
+  public void afterEach() {
     productRepository.deleteAll();
   }
-
-
 
   @Test
   public void testAddProduct() throws Exception {
@@ -79,18 +76,29 @@ public class IntegrationTestDemo {
     assertEquals(1, productRepository.findAll().size());
   }
 
-  // Get All employees Test
   @Test
   public void getAllProducts() throws Exception {
-    // precondition
     List<Product> productList = new ArrayList<>();
-    Product product = new Product("P1_"+ UUID.randomUUID().toString(), "Headset", "seller:24988ssnfajkn48", 500, 1100,Boolean.FALSE);
-    Product product2 = new Product("P2_"+UUID.randomUUID().toString(), "Headset", "seller:24988ssnfajkn48", 500, 1100,Boolean.FALSE);
+    Product product =
+        new Product(
+            "P1_" + UUID.randomUUID().toString(),
+            "Headset",
+            "seller:24988ssnfajkn48",
+            500,
+            1100,
+            Boolean.FALSE);
+    Product product2 =
+        new Product(
+            "P2_" + UUID.randomUUID().toString(),
+            "Headset",
+            "seller:24988ssnfajkn48",
+            500,
+            1100,
+            Boolean.FALSE);
     productList.add(product);
     productList.add(product2);
     productRepository.saveAll(productList);
 
-    // Action and Verify
     mockMvc
         .perform(get("/products"))
         .andExpect(status().isOk())
@@ -101,15 +109,27 @@ public class IntegrationTestDemo {
 
   @Test
   public void getProduct() throws Exception {
-    // precondition
     List<Product> productList = new ArrayList<>();
-    Product product = new Product("P1_"+UUID.randomUUID().toString(), "Headset", "seller:24988ssnfajkn48", 500, 1100,Boolean.FALSE);
-    Product product2 = new Product("P2_"+UUID.randomUUID().toString(), "Headset", "seller:24988ssnfajkn48", 500, 1100,Boolean.FALSE);
+    Product product =
+        new Product(
+            "P1_" + UUID.randomUUID().toString(),
+            "Headset",
+            "seller:24988ssnfajkn48",
+            500,
+            1100,
+            Boolean.FALSE);
+    Product product2 =
+        new Product(
+            "P2_" + UUID.randomUUID().toString(),
+            "Headset",
+            "seller:24988ssnfajkn48",
+            500,
+            1100,
+            Boolean.FALSE);
     productList.add(product);
     productList.add(product2);
     productRepository.saveAll(productList);
 
-    // Action and Verify
     mockMvc
         .perform(get("/products/{productId}", product2.getProductId()))
         .andExpect(status().isOk())
@@ -119,32 +139,43 @@ public class IntegrationTestDemo {
 
   @Test
   public void updateProduct() throws Exception {
-    // precondition
 
-    Product product = new Product("P1_"+UUID.randomUUID().toString(), "Headset", "seller:24988ssnfajkn48", 500, 1100,Boolean.FALSE);
+    Product product =
+        new Product(
+            "P1_" + UUID.randomUUID().toString(),
+            "Headset",
+            "seller:24988ssnfajkn48",
+            500,
+            1100,
+            Boolean.FALSE);
     productRepository.save(product);
 
     ProductRequest updatedProductRequest =
         new ProductRequest("Headset", "seller:24988ssnfajkn48", 50, 1100);
 
-    // Action and Verify
     mockMvc
         .perform(
             put("/products/{productId}", product.getProductId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updatedProductRequest)))
         .andExpect(status().isOk())
-        .andDo(print());
+        .andDo(print())
+        .andExpect(jsonPath("$.productName", is(product.getProductName())));
   }
 
   @Test
   public void deleteProduct() throws Exception {
-    // precondition
 
-    Product product = new Product("P1_"+UUID.randomUUID().toString(), "Headset", "seller:24988ssnfajkn48", 500, 1100,Boolean.FALSE);
+    Product product =
+        new Product(
+            "P1_" + UUID.randomUUID().toString(),
+            "Headset",
+            "seller:24988ssnfajkn48",
+            500,
+            1100,
+            Boolean.FALSE);
     productRepository.save(product);
 
-    // Action and Verify
     mockMvc
         .perform(delete("/products/{productId}", product.getProductId()))
         .andExpect(status().isNoContent())

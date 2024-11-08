@@ -7,67 +7,69 @@ import com.thinkconstructive.rest_demo.model.Product;
 import com.thinkconstructive.rest_demo.repository.ProductRepository;
 import com.thinkconstructive.rest_demo.responses.ProductResponse;
 import com.thinkconstructive.rest_demo.service.ProductService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.hibernate.Filter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.hibernate.Session;
 
 import java.util.Optional;
 import java.util.UUID;
 
+import jakarta.persistence.EntityManager;
+
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
 
-  private ProductRepository productRepository;
-  private ProductMapper productMapper;
-
-  @Autowired
-  public ProductServiceImpl(ProductMapper productMapper, ProductRepository productRepository) {
-    this.productMapper = productMapper;
-    this.productRepository = productRepository;
-  }
+  private final ProductRepository productRepository;
+  private final ProductMapper productMapper;
+  private final EntityManager entityManager;
 
   @Override
-  public void createProduct(ProductRequest productRequest) {
+  public ProductResponse createProduct(ProductRequest productRequest) {
     Product product = toDomainRequest(productRequest);
     productRepository.save(product);
+    return productMapper.getMappedProduct(product);
   }
 
   @Override
-  public void updateProduct(String productId, ProductRequest productRequest) {
+  public ProductResponse updateProduct(String productId, ProductRequest productRequest) {
 
-    productRepository
+    return productRepository
         .findById(productId)
-        .ifPresentOrElse(
+        .map(
             product -> {
               Product updatedProduct =
                   productMapper.updateProductFromProductRequest(product, productRequest);
               productRepository.save(updatedProduct);
-            },
+              return productMapper.getMappedProduct(updatedProduct);
+            })
+        .orElseThrow(
             () -> {
               log.error(String.format("Product with id %s not found", productId));
-              throw new ProductNotFoundException(
-                  String.format("Product with id %s not found", productId));
+              return new ProductNotFoundException("Requested Product not found, cannot be deleted");
             });
   }
 
   @Override
   // implement soft delete
-  public void deleteProduct(String productId) {
-
-    productRepository
+  public String deleteProduct(String productId) {
+    return productRepository
         .findById(productId)
-        .ifPresentOrElse(
-            product ->
-                productRepository.deleteById(
-                    productId), // Perform the delete action if the product exists
+        .map(
+            product -> {
+              productRepository.deleteById(productId);
+              return "Product with id " + productId + " deleted successfully";
+            })
+        .orElseThrow(
             () -> {
               log.error(String.format("Product with id %s not found", productId));
-              throw new ProductNotFoundException("Requested Product not found, cannot be deleted");
-            } // Throw an exception if not found
-            );
+              return new ProductNotFoundException("Requested Product not found, cannot be deleted");
+            });
   }
 
   @Override
@@ -86,11 +88,19 @@ public class ProductServiceImpl implements ProductService {
   }
 
   @Override
-  public Page<ProductResponse> getAllProducts(Pageable pageable) {
+  public Page<ProductResponse> getAllProducts(Pageable pageable, boolean showDeleted) {
 
-    return productRepository
-        .findAll(pageable)
-        .map(product -> productMapper.getMappedProduct(product));
+    Session session = entityManager.unwrap(Session.class);
+
+    Filter filter = session.enableFilter("deletedProductFilter");
+    filter.setParameter("isDeleted", showDeleted);
+
+    Page<ProductResponse> allProducts =
+        productRepository.findAll(pageable).map(productMapper::getMappedProduct);
+
+    session.disableFilter("deletedProductFilter");
+
+    return allProducts;
   }
 
   private Product toDomainRequest(ProductRequest productRequest) {

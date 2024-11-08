@@ -17,8 +17,8 @@ public class ProductExceptionHandler {
     public ResponseEntity<Object> handleProductNotFoundException(ProductNotFoundException productNotFoundException)
     {
       ProductException productException=new ProductException(
-              productNotFoundException.getMessage(), productNotFoundException.getCause(),
-              HttpStatus.NOT_FOUND
+              productNotFoundException.getMessage()
+
       );
       return new ResponseEntity<>(productException,HttpStatus.NOT_FOUND);
     }

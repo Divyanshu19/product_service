@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -26,8 +28,8 @@ public class ProductServiceController {
   @ResponseStatus(HttpStatus.OK)
   public ResponseEntity<ProductResponse> getProductDetails(
       @PathVariable("productId") String productId) {
-    Optional<ProductResponse> productResponse = productService.getProduct(productId);
     log.info("Request received for get product for id {}", productId);
+    Optional<ProductResponse> productResponse = productService.getProduct(productId);
     return productResponse
         .map(ResponseEntity::ok)
         .orElseGet(() -> ResponseEntity.notFound().build());
@@ -38,32 +40,33 @@ public class ProductServiceController {
   @GetMapping("") // Implement pagination
   @ResponseStatus(HttpStatus.OK)
   public ResponseEntity<Page<ProductResponse>> getAllProductDetails(
-          Pageable pageable) {
+          @PageableDefault(page = 0, size = 200,sort = "productName", direction = Sort.Direction.DESC) Pageable pageable,@RequestParam(name = "showDeleted", defaultValue = "false") boolean showDeleted) {
     log.info("Request received for getAllProducts");
-    Page<ProductResponse> allProducts = productService.getAllProducts(pageable);
+    Page<ProductResponse> allProducts = productService.getAllProducts(pageable,showDeleted);
     return ResponseEntity.ok(allProducts);
   }
 
   @PostMapping
-  @ResponseStatus(HttpStatus.CREATED)
-  public void createProductDetails(@Valid @RequestBody ProductRequest productRequest) {
+  @ResponseStatus(HttpStatus.CREATED) // show the cutomer the product he created
+  public ProductResponse createProductDetails(@Valid @RequestBody ProductRequest productRequest) {
     log.info("Received createProduct Request");
-    productService.createProduct(productRequest);
+   return productService.createProduct(productRequest);
   }
 
   @PutMapping("/{productId}")
   @ResponseStatus(HttpStatus.OK)
-  public void updateProductDetails(
+  public ProductResponse updateProductDetails(
       @PathVariable("productId") String productId,
       @Valid @RequestBody ProductRequest productRequest) {
     log.info("Received updateProduct Request");
-    productService.updateProduct(productId, productRequest);
+    return productService.updateProduct(productId, productRequest);
   }
 
   @DeleteMapping("/{productId}")
-  @ResponseStatus(HttpStatus.NO_CONTENT)
-  public void deleteProductDetails(@PathVariable("productId") String productId) {
+  @ResponseStatus(HttpStatus.OK)
+  public String  deleteProductDetails(@PathVariable("productId") String productId) {
     log.info("Received delete product request for id {}", productId);
-    productService.deleteProduct(productId);
+   return productService.deleteProduct(productId);
   }
+
 }
